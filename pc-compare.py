@@ -29,7 +29,6 @@ def import_cap(path, filename):
 	for index in range(len(ipsrc)):
 		try:
 			cap_dict[index] = {}
-			cap_dict[index]['index'] = index
 			cap_dict[index]['ip.src'] = ipsrc[index]
 			cap_dict[index]['ip.dst'] = ipdst[index]
 			cap_dict[index]['tcp.srcport'] = tcpsrcport[index]
@@ -43,6 +42,11 @@ def import_cap(path, filename):
 		except Exception as e:
 			print ('Error: ', e, '\n', 'Index: ', index)
 	return cap_dict
+
+def cap_concat(cap_dict, index):
+	# Concatenate the unique packet values from the dictionary
+	concat = cap_dict[index]['ip.src'] + cap_dict[index]['ip.dst'] + cap_dict[index]['tcp.srcport'] + cap_dict[index]['tcp.dstport'] + cap_dict[index]['tcp.seq'] + cap_dict[index]['tcp.nxtseq'] + cap_dict[index]['tcp.flags.syn'] + cap_dict[index]['tcp.flags.ack'] + cap_dict[index]['tcp.flags.reset']
+	return concat
 
 #print files
 
@@ -60,9 +64,15 @@ def import_cap(path, filename):
 #	account = filename.split(".")[0]
 
 srccap_dict = import_cap(path, source)
-	
-print (srccap_dict[100])
+dstcap_dict = import_cap(path, destination)
 
-
-#['Items']['Origins']['Items']['DomainName']
-
+for srcindex in range(len(srccap_dict)):
+	srcconcat = cap_concat(srccap_dict, srcindex)
+	for dstindex in range(len(dstcap_dict)):
+		dstconcat = cap_concat(dstcap_dict, dstindex)
+		if srcconcat == dstconcat:
+			srccap_dict[srcindex]['packetatdest'] = 'Yes'
+			break
+		else:
+			srccap_dict[srcindex]['packetatdest'] = 'No'
+	print(srccap_dict[srcindex])
