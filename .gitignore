@@ -1,2 +1,4 @@
 # Test JSON Files
 *.json
+*.pcapng
+*.pcap
