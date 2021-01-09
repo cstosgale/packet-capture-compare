@@ -6,8 +6,8 @@ from os import listdir
 from jsonextract import json_extract
 
 path = ''
-clientjson = 'client cap missing packet.json'
-serverjson = 'firewall cap.json'
+clientjson = 'client capture.json'
+serverjson = 'firewall capture.json'
 clientconcat_list = []
 
 def ftime_datetime(string):
@@ -33,10 +33,10 @@ def import_cap(path, filename):
 	contents = jfile.read()
 	jblock = json.loads(contents)
 	frametime = json_extract(jblock, 'frame.time')
-	ipclient = json_extract(jblock, 'ip.client')
-	ipserver = json_extract(jblock, 'ip.server')
-	tcpclientport = json_extract(jblock, 'tcp.clientport')
-	tcpserverport = json_extract(jblock, 'tcp.serverport')
+	ipsrc = json_extract(jblock, 'ip.src')
+	ipdst = json_extract(jblock, 'ip.dst')
+	tcpsrcport = json_extract(jblock, 'tcp.srcport')
+	tcpdstport = json_extract(jblock, 'tcp.dstport')
 	tcpseq = json_extract(jblock, 'tcp.seq')
 	tcpnxtseq = json_extract(jblock, 'tcp.nxtseq')
 	tcpflagssyn = json_extract(jblock, 'tcp.flags.syn')
@@ -44,27 +44,26 @@ def import_cap(path, filename):
 	tcpflagsreset = json_extract(jblock, 'tcp.flags.reset')
 
 	#Combine the different lists into a single dictionary
-	for index in range(len(ipclient)):
+	for index in range(len(ipsrc)):
 		try:
 			cap_dict[index] = {}
 			cap_dict[index]['frame.date'] = ftime_datetime(frametime[index])
-			cap_dict[index]['ip.client'] = ipclient[index]
-			cap_dict[index]['ip.server'] = ipserver[index]
-			cap_dict[index]['tcp.clientport'] = tcpclientport[index]
-			cap_dict[index]['tcp.serverport'] = tcpserverport[index]
+			cap_dict[index]['ip.src'] = ipsrc[index]
+			cap_dict[index]['ip.dst'] = ipdst[index]
+			cap_dict[index]['tcp.srcport'] = tcpsrcport[index]
+			cap_dict[index]['tcp.dstport'] = tcpdstport[index]
 			cap_dict[index]['tcp.seq'] = tcpseq[index]
 			cap_dict[index]['tcp.nxtseq'] = tcpnxtseq[index]
 			cap_dict[index]['tcp.flags.syn'] = tcpflagssyn[index]
 			cap_dict[index]['tcp.flags.ack'] = tcpflagsack[index]
 			cap_dict[index]['tcp.flags.reset'] = tcpflagsreset[index]
-		
 		except Exception as e:
 			print ('Error: ', e, '\n', 'Index: ', index)
 	return cap_dict
 
 def cap_concat(cap_dict, index):
 	# Concatenate the unique packet values from the dictionary
-	concat = cap_dict[index]['tcp.clientport'] + cap_dict[index]['tcp.serverport'] + cap_dict[index]['tcp.seq'] + cap_dict[index]['tcp.nxtseq'] + cap_dict[index]['tcp.flags.syn'] + cap_dict[index]['tcp.flags.ack'] + cap_dict[index]['tcp.flags.reset']
+	concat = cap_dict[index]['tcp.srcport'] + cap_dict[index]['tcp.dstport'] + cap_dict[index]['tcp.seq'] + cap_dict[index]['tcp.nxtseq'] + cap_dict[index]['tcp.flags.syn'] + cap_dict[index]['tcp.flags.ack'] + cap_dict[index]['tcp.flags.reset']
 	return concat
 
 #Import the captures into two dictionaries
