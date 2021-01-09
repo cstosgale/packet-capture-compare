@@ -4,6 +4,8 @@ import sys
 import datetime
 from os import listdir
 from jsonextract import json_extract
+from collections import OrderedDict 
+from operator import itemgetter
 
 path = ''
 clientjson = 'client capture.json'
@@ -102,8 +104,14 @@ for serverindex in range(len(servercap_dict)):
 		print(compindex)
 		compcap_dict[compindex] = servercap_dict[serverindex]
 
+#Sort the output by the packet timestamps
+compcap_dict = sorted(compcap_dict.values(), key=itemgetter('frame.date'))
+
+
 for index in range(len(compcap_dict)):
 	print(compcap_dict[index])
+	
+
 
 #print files
 
