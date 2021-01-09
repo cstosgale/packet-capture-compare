@@ -2,15 +2,19 @@ import csv
 import json
 import sys
 import datetime
+#import XlsXWriter
 from os import listdir
 from jsonextract import json_extract
 from collections import OrderedDict 
 from operator import itemgetter
 
+#Config Variables
 path = ''
 clientjson = 'client capture.json'
 serverjson = 'firewall capture.json'
+wbname = 'cap-analysis.xlsx'
 clientconcat_list = []
+cap_schema = ['frame.time', 'ip.src', 'ip.dst', 'tcp.srcport', 'tcp.dstport', 'tcp.seq', 'tcp.nxtseq', 'tcp.flags.syn', 'tcp.flags.ack', 'tcp.flags.ack', 'tcp.flags.reset']
 
 def ftime_datetime(string):
 	#Converts the frame.time string formatted as "Jan  9, 2021 11:12:52.206763000 GMT Standard Time" to datetime
@@ -34,82 +38,90 @@ def import_cap(path, filename):
 	jfile = open(path + filename)
 	contents = jfile.read()
 	jblock = json.loads(contents)
-	frametime = json_extract(jblock, 'frame.time')
-	ipsrc = json_extract(jblock, 'ip.src')
-	ipdst = json_extract(jblock, 'ip.dst')
-	tcpsrcport = json_extract(jblock, 'tcp.srcport')
-	tcpdstport = json_extract(jblock, 'tcp.dstport')
-	tcpseq = json_extract(jblock, 'tcp.seq')
-	tcpnxtseq = json_extract(jblock, 'tcp.nxtseq')
-	tcpflagssyn = json_extract(jblock, 'tcp.flags.syn')
-	tcpflagsack = json_extract(jblock, 'tcp.flags.ack')
-	tcpflagsreset = json_extract(jblock, 'tcp.flags.reset')
-
-	#Combine the different lists into a single dictionary
-	for index in range(len(ipsrc)):
-		try:
-			cap_dict[index] = {}
-			cap_dict[index]['frame.date'] = ftime_datetime(frametime[index])
-			cap_dict[index]['ip.src'] = ipsrc[index]
-			cap_dict[index]['ip.dst'] = ipdst[index]
-			cap_dict[index]['tcp.srcport'] = tcpsrcport[index]
-			cap_dict[index]['tcp.dstport'] = tcpdstport[index]
-			cap_dict[index]['tcp.seq'] = tcpseq[index]
-			cap_dict[index]['tcp.nxtseq'] = tcpnxtseq[index]
-			cap_dict[index]['tcp.flags.syn'] = tcpflagssyn[index]
-			cap_dict[index]['tcp.flags.ack'] = tcpflagsack[index]
-			cap_dict[index]['tcp.flags.reset'] = tcpflagsreset[index]
-		except Exception as e:
-			print ('Error: ', e, '\n', 'Index: ', index)
+	for sitem in cap_schema:
+		index = 0
+		for jitem in json_extract(jblock, sitem):
+			index += 1
+			if len(cap_dict) < index:
+				cap_dict[index] = {}
+			cap_dict[index][sitem] = jitem
 	return cap_dict
 
 def cap_concat(cap_dict, index):
 	# Concatenate the unique packet values from the dictionary
 	concat = cap_dict[index]['tcp.srcport'] + cap_dict[index]['tcp.dstport'] + cap_dict[index]['tcp.seq'] + cap_dict[index]['tcp.nxtseq'] + cap_dict[index]['tcp.flags.syn'] + cap_dict[index]['tcp.flags.ack'] + cap_dict[index]['tcp.flags.reset']
 	return concat
+	
+# def write_xlsx(wbname):
+# 	# Create a workbook and add a worksheet.
+# 	workbook = xlsxwriter.Workbook(wbname)
+# 	worksheet = workbook.add_worksheet()
+# 
+# 	# Start from the first cell. Rows and columns are zero indexed.
+# 	row = 0
+# 	col = 0
+# 
+# 	# Iterate over the data and write it out row by row.
+# 	for item, cost in (expenses):
+# 		worksheet.write(row, col, item)
+# 		worksheet.write(row, col + 1, cost)
+# 		row += 1
+
+# Write a total using a formula.
+# worksheet.write(row, 0, 'Total')
+# worksheet.write(row, 1, '=SUM(B1:B4)')
+# 
+# workbook.close()
 
 #Import the captures into two dictionaries
 clientcap_dict = import_cap(path, clientjson)
 servercap_dict = import_cap(path, serverjson)
 
+
 compcap_dict = clientcap_dict
 
+print(clientcap_dict[1])
+
 for clientindex in range(len(clientcap_dict)):
-	clientconcat = cap_concat(clientcap_dict, clientindex)
-	for serverindex in range(len(servercap_dict)):
-		serverconcat = cap_concat(servercap_dict, serverindex)
-		if clientconcat == serverconcat:
-			clientcap_dict[clientindex]['packetatclient'] = 'Yes'
-			clientcap_dict[clientindex]['packetatdest'] = 'Yes'
-			compcap_dict[clientindex]['packetatclient'] = 'Yes'
-			compcap_dict[clientindex]['packetatdest'] = 'Yes'
-			break
-		else:
-			clientcap_dict[clientindex]['packetatclient'] = 'Yes'
-			clientcap_dict[clientindex]['packetatdest'] = 'No'
-			compcap_dict[clientindex]['packetatclient'] = 'Yes'
-			compcap_dict[clientindex]['packetatdest'] = 'No'
+	if clientindex != 0:
+		clientconcat = cap_concat(clientcap_dict, clientindex)
+		for serverindex in range(len(servercap_dict)):
+			if serverindex != 0:
+				serverconcat = cap_concat(servercap_dict, serverindex)
+				if clientconcat == serverconcat:
+					clientcap_dict[clientindex]['packetatclient'] = 'Yes'
+					clientcap_dict[clientindex]['packetatsvr'] = 'Yes'
+					compcap_dict[clientindex]['packetatclient'] = 'Yes'
+					compcap_dict[clientindex]['packetatsvr'] = 'Yes'
+					break
+				else:
+					clientcap_dict[clientindex]['packetatclient'] = 'Yes'
+					clientcap_dict[clientindex]['packetatsvr'] = 'No'
+					compcap_dict[clientindex]['packetatclient'] = 'Yes'
+					compcap_dict[clientindex]['packetatsvr'] = 'No'
 
 #Create a list containing all the client packet concatinations
 for clientindex in range(len(clientcap_dict)):
-	clientconcat_list.append(cap_concat(clientcap_dict, clientindex))
+	if clientindex != 0:
+		clientconcat_list.append(cap_concat(clientcap_dict, clientindex))
 
 #Check if the server packet does not exist in the client
 for serverindex in range(len(servercap_dict)):
-	serverconcat = cap_concat(servercap_dict, serverindex)
-	if serverconcat not in clientconcat_list:
-		servercap_dict[serverindex]['packetatclient'] = 'No'
-		servercap_dict[serverindex]['packetatdest'] = 'Yes'
-		compindex = len(compcap_dict)
-		print(compindex)
-		compcap_dict[compindex] = servercap_dict[serverindex]
+	if serverindex != 0:	
+		serverconcat = cap_concat(servercap_dict, serverindex)
+		if serverconcat not in clientconcat_list:
+			servercap_dict[serverindex]['packetatclient'] = 'No'
+			servercap_dict[serverindex]['packetatsvr'] = 'Yes'
+			compindex = len(compcap_dict)
+			compcap_dict[compindex] = servercap_dict[serverindex]
 
 #Sort the output by the packet timestamps
-compcap_dict = sorted(compcap_dict.values(), key=itemgetter('frame.date'))
+compcap_dict = sorted(compcap_dict.values(), key=itemgetter('frame.time'))
 
 
 for index in range(len(compcap_dict)):
-	print(compcap_dict[index])
+	if compcap_dict[index]['packetatsvr'] == 'Yes':
+		print(compcap_dict[index])
 	
 
 
