@@ -11,7 +11,7 @@ The key aim is to determine if any packets have been dropped between source and 
 Please ensure you have Python 3.8 or later installed.
 You will also need to install the XLSX Writer library as follows:
 
-pyrhon3 -m pip install XlsxWriter
+python3 -m pip install XlsxWriter
 
 ## Usage
 
