@@ -2,7 +2,7 @@
 Python Script to compare two packet captures.
 
 ## Summary
-This script will take two packet captures formatted as JSON, compare them, and write the results to an XLSX file. Please note only TCP comparison is supported at this tume.
+This script will take two packet captures formatted as JSON, compare them, and write the results to an XLSX file. Please note only TCP comparison is supported at this time.
 
 The key aim is to determine if any packets have been dropped between source and destination, additional functionality will be added soon.
 
